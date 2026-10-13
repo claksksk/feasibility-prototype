@@ -12,9 +12,6 @@
             brand: { navy: '#0f2557', teal: '#0ea5e9', tealdark: '#0284c7', orange: '#f97316' }
         } } } };
     </script>
-    <!-- Firebase App & Firestore SDKs CDN -->
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <style>
         #webcam {
             transform: scaleX(1) !important;
@@ -79,7 +76,7 @@
         <!-- LOGIN CARD -->
         <div id="login-card" class="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-md border-t-4 border-brand-teal">
             <div class="flex flex-col items-center mb-6">
-                <img src="logo.jpg" alt="TrackRight HR logo" class="w-28 sm:w-36 h-auto mix-blend-multiply">
+                <img src="logo.jpg" alt="TrackRight HR logo" class="w-28 sm:w-36 h-auto mix-blend-multiply" onerror="this.style.display='none'">
                 <h2 class="text-lg sm:text-xl font-bold text-brand-navy mt-3 text-center tracking-tight">Leave &amp; Attendance Monitoring</h2>
                 <span id="login-mode-badge" class="mt-2 text-xs font-semibold px-3 py-1 rounded-full bg-sky-50 text-brand-tealdark border border-sky-200">Employee Portal</span>
             </div>
@@ -119,7 +116,7 @@
         <!-- REGISTER CARD -->
         <div id="register-card" class="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-md hidden border-t-4 border-brand-teal">
             <div class="flex flex-col items-center mb-4">
-                <img src="logo.jpg" alt="TrackRight HR logo" class="w-24 sm:w-28 h-auto mix-blend-multiply">
+                <img src="logo.jpg" alt="TrackRight HR logo" class="w-24 sm:w-28 h-auto mix-blend-multiply" onerror="this.style.display='none'">
             </div>
             <h2 class="text-xl sm:text-2xl font-bold text-brand-navy mb-6 text-center tracking-tight">Create an Account</h2>
             <form onsubmit="handleRegister(event)" class="space-y-4">
@@ -184,7 +181,7 @@
         <header class="bg-brand-navy text-white px-4 sm:px-6 py-3.5 shadow-md flex flex-col sm:flex-row justify-between items-center gap-3 border-b border-slate-800">
             <div class="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-start">
                 <div class="flex items-center space-x-2.5">
-                    <img src="logo.jpg" alt="TrackRight HR" class="h-9 w-auto rounded-lg bg-white p-0.5 shadow">
+                    <img src="logo.jpg" alt="TrackRight HR" class="h-9 w-auto rounded-lg bg-white p-0.5 shadow" onerror="this.style.display='none'">
                     <div>
                         <h1 class="text-sm sm:text-base font-bold tracking-tight">TrackRight HR Portal</h1>
                         <p class="text-[10px] text-sky-200">Accurate Records &amp; Reliable Tracking</p>
@@ -413,7 +410,7 @@
                     <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-4 gap-4">
                         <div>
                             <h2 class="text-lg sm:text-xl font-bold text-slate-800 tracking-tight" id="admin-att-title">Attendance Monitoring &amp; Reports</h2>
-                            <p class="text-xs text-slate-500">Monitor employee time logs, face snapshots, and daily attendance records (Cloud Synced).</p>
+                            <p class="text-xs text-slate-500">Monitor employee time logs, face snapshots, and daily attendance records (Real-time Synced).</p>
                         </div>
                         <div class="flex flex-wrap items-center gap-2 w-full lg:w-auto">
                             <input type="text" id="admin-att-search" oninput="updateAdminUI()" placeholder="Search employee name..." class="border border-slate-300 p-2 rounded-lg text-sm w-full sm:w-48 focus:outline-none focus:ring-2 focus:ring-brand-teal">
@@ -770,107 +767,59 @@
 
     <!-- ================= SYSTEM RESET BUTTON (ADMIN ONLY / UTILITY) ================= -->
     <div class="bg-slate-900 text-slate-400 text-center py-2 text-[11px] flex justify-center items-center gap-4 border-t border-slate-800">
-        <span>TrackRight HR &mdash; Clean Slate Database Active</span>
+        <span>TrackRight HR &mdash; Shared Storage System Active</span>
         <button onclick="forceResetCloudDatabase()" class="bg-rose-900/50 hover:bg-rose-800 text-rose-200 px-2.5 py-1 rounded text-[10px] font-semibold transition border border-rose-700">⚠️ I-reset ang Lahat (Clean Slate)</button>
     </div>
 
-    <!-- ================= JAVASCRIPT & FIREBASE CLOUD SYNC LOGIC ================= -->
+    <!-- ================= JAVASCRIPT & SHARED STORAGE LOGIC ================= -->
     <script>
         // -------------------------------------------------------------
-        // FIREBASE CLOUD CONFIGURATION
+        // ROBUST SHARED LOCALSTORAGE SYNC MANAGER
         // -------------------------------------------------------------
-        const firebaseConfig = {
-            apiKey: "AIzaSyD-DemoKeyForTrackRightHRPortal12345",
-            authDomain: "trackright-hr-portal.firebaseapp.com",
-            projectId: "trackright-hr-portal",
-            storageBucket: "trackright-hr-portal.appspot.com",
-            messagingSenderId: "123456789012",
-            appId: "1:123456789012:web:abcdef1234567890"
-        };
+        let users = JSON.parse(localStorage.getItem('trackright_users')) || [];
+        let currentUser = JSON.parse(localStorage.getItem('trackright_current_user')) || null;
+        let attendanceRecords = JSON.parse(localStorage.getItem('trackright_attendance')) || {}; 
+        let leaveRequests = JSON.parse(localStorage.getItem('trackright_leaves')) || [];
 
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
+        function saveToStorage() {
+            localStorage.setItem('trackright_users', JSON.stringify(users));
+            localStorage.setItem('trackright_current_user', JSON.stringify(currentUser));
+            localStorage.setItem('trackright_attendance', JSON.stringify(attendanceRecords));
+            localStorage.setItem('trackright_leaves', JSON.stringify(leaveRequests));
         }
-        const db = firebase.firestore();
 
-        let users = [];
-        let currentUser = JSON.parse(localStorage.getItem('msme_current_user')) || null;
-        let attendanceRecords = {}; 
-        let leaveRequests = [];
-
-        function initCloudSync() {
-            db.collection("users").onSnapshot((snapshot) => {
-                users = [];
-                snapshot.forEach((doc) => {
-                    users.push(doc.data());
-                });
-                if (currentUser) {
-                    const verified = users.find(u => u.email === currentUser.email);
-                    if (verified) {
-                        currentUser = verified;
-                        localStorage.setItem('msme_current_user', JSON.stringify(currentUser));
-                    }
-                }
+        // Listen to cross-tab storage changes so admin sees real-time updates instantly
+        window.addEventListener('storage', (event) => {
+            if (event.key && event.key.startsWith('trackright_')) {
+                users = JSON.parse(localStorage.getItem('trackright_users')) || [];
+                attendanceRecords = JSON.parse(localStorage.getItem('trackright_attendance')) || {};
+                leaveRequests = JSON.parse(localStorage.getItem('trackright_leaves')) || [];
                 refreshActiveViews();
-            }, (error) => {
-                console.warn("Cloud sync error:", error);
-            });
-
-            db.collection("attendance").onSnapshot((snapshot) => {
-                attendanceRecords = {};
-                snapshot.forEach((doc) => {
-                    attendanceRecords[doc.id] = doc.data().records || {};
-                });
-                refreshActiveViews();
-            }, (error) => {
-                console.warn("Attendance cloud sync error:", error);
-            });
-
-            db.collection("leaves").onSnapshot((snapshot) => {
-                leaveRequests = [];
-                snapshot.forEach((doc) => {
-                    leaveRequests.push({ id: doc.id, ...doc.data() });
-                });
-                refreshActiveViews();
-            }, (error) => {
-                console.warn("Leaves cloud sync error:", error);
-            });
-        }
+            }
+        });
 
         // Utility function to wipe / clean slate database completely
-        async function forceResetCloudDatabase() {
+        function forceResetCloudDatabase() {
             if (!confirm("Sigurado ka bang gusto mong i-reset at burahin ang LAHAT ng empleyado, attendance, at leave requests? Magiging ganap na bago at walang laman ang app.")) {
                 return;
             }
-            try {
-                // Delete users
-                const uSnap = await db.collection("users").get();
-                const batchU = db.batch();
-                uSnap.forEach(doc => batchU.delete(doc.ref));
-                await batchU.commit();
-
-                // Delete attendance
-                const aSnap = await db.collection("attendance").get();
-                const batchA = db.batch();
-                aSnap.forEach(doc => batchA.delete(doc.ref));
-                await batchA.commit();
-
-                // Delete leaves
-                const lSnap = await db.collection("leaves").get();
-                const batchL = db.batch();
-                lSnap.forEach(doc => batchL.delete(doc.ref));
-                await batchL.commit();
-
-                localStorage.clear();
-                alert("Matagumpay na na-reset ang buong database! Naka-clean slate na ang system.");
-                location.reload();
-            } catch (err) {
-                alert("Error sa pag-reset: " + err.message);
-            }
+            localStorage.clear();
+            users = [];
+            currentUser = null;
+            attendanceRecords = {};
+            leaveRequests = [];
+            alert("Matagumpay na na-reset ang buong database! Naka-clean slate na ang system.");
+            location.reload();
         }
 
         function refreshActiveViews() {
             if (currentUser) {
+                // Verify user still exists in users list
+                const verified = users.find(u => u.email === currentUser.email);
+                if (verified) {
+                    currentUser = verified;
+                    localStorage.setItem('trackright_current_user', JSON.stringify(currentUser));
+                }
                 if (currentUser.role === 'employee') {
                     updateEmployeeUI();
                 } else {
@@ -993,8 +942,6 @@
                 attDateInput.value = todayLocal();
             }
 
-            initCloudSync();
-
             if (currentUser) {
                 renderDashboard();
             } else {
@@ -1064,8 +1011,8 @@
             });
         }
 
-        // Robust Direct Firestore Check on Register to Avoid False Duplicates
-        async function handleRegister(e) {
+        // Robust Local Registration with Duplicate Check
+        function handleRegister(e) {
             e.preventDefault();
             const name = document.getElementById('reg-name').value;
             const email = document.getElementById('reg-email').value.trim().toLowerCase();
@@ -1083,38 +1030,31 @@
                 position = document.getElementById('reg-custom-position').value;
             }
 
-            const todayStr = todayLocal();
-
-            try {
-                // Check direct in Firestore
-                const docRef = db.collection("users").doc(email);
-                const docSnap = await docRef.get();
-                if (docSnap.exists) {
-                    alert('An account with this email already exists in the database!');
-                    return;
-                }
-
-                const newUser = { 
-                    id: Date.now(), 
-                    name, 
-                    email, 
-                    password, 
-                    role, 
-                    position, 
-                    createdAt: todayStr,
-                    profilePic: ''
-                };
-
-                await docRef.set(newUser);
-                alert('Registration successful! You may now login.');
-                setLoginMode(role);
-                showPage('login-card');
-                document.getElementById('register-card').querySelector('form').reset();
-                togglePositionDropdown();
-                populatePositionFilter();
-            } catch (err) {
-                alert('Registration error: ' + err.message);
+            const existing = users.find(u => u.email === email);
+            if (existing) {
+                alert('An account with this email already exists in the system!');
+                return;
             }
+
+            const newUser = { 
+                id: Date.now(), 
+                name, 
+                email, 
+                password, 
+                role, 
+                position, 
+                createdAt: todayLocal(),
+                profilePic: ''
+            };
+
+            users.push(newUser);
+            saveToStorage();
+            alert('Registration successful! You may now login.');
+            setLoginMode(role);
+            showPage('login-card');
+            document.getElementById('register-card').querySelector('form').reset();
+            togglePositionDropdown();
+            populatePositionFilter();
         }
 
         function setLoginMode(mode) {
@@ -1148,47 +1088,40 @@
             setLoginMode(loginMode === 'employee' ? 'admin' : 'employee');
         }
 
-        // Robust Direct Firestore Login Verification
-        async function handleLogin(e) {
+        // Robust Login Verification
+        function handleLogin(e) {
             e.preventDefault();
             const email = document.getElementById('login-email').value.trim().toLowerCase();
             const password = document.getElementById('login-password').value;
 
-            try {
-                const docRef = db.collection("users").doc(email);
-                const docSnap = await docRef.get();
+            const foundUser = users.find(u => u.email === email);
 
-                if (!docSnap.exists) {
-                    alert('Invalid email or password, or account is not registered.');
-                    return;
-                }
-
-                const foundUser = docSnap.data();
-                if (foundUser.password !== password) {
-                    alert('Incorrect password! Please check your password.');
-                    return;
-                }
-
-                if (loginMode === 'admin' && foundUser.role !== 'admin') {
-                    alert('This account is not an Admin/HR account. Please use the Employee Login.');
-                    return;
-                }
-                if (loginMode === 'employee' && foundUser.role === 'admin') {
-                    alert('Admin/HR accounts must log in using "Log in as Admin / HR".');
-                    return;
-                }
-
-                currentUser = foundUser;
-                localStorage.setItem('msme_current_user', JSON.stringify(currentUser));
-                renderDashboard();
-            } catch (err) {
-                alert('Login error: ' + err.message);
+            if (!foundUser) {
+                alert('Invalid email or password, or account is not registered.');
+                return;
             }
+            if (foundUser.password !== password) {
+                alert('Incorrect password! Please check your password.');
+                return;
+            }
+
+            if (loginMode === 'admin' && foundUser.role !== 'admin') {
+                alert('This account is not an Admin/HR account. Please use the Employee Login.');
+                return;
+            }
+            if (loginMode === 'employee' && foundUser.role === 'admin') {
+                alert('Admin/HR accounts must log in using "Log in as Admin / HR".');
+                return;
+            }
+
+            currentUser = foundUser;
+            saveToStorage();
+            renderDashboard();
         }
 
         function handleLogout() {
             currentUser = null;
-            localStorage.removeItem('msme_current_user');
+            localStorage.removeItem('trackright_current_user');
             document.getElementById('dashboard-container').classList.add('hidden');
             document.getElementById('auth-container').classList.remove('hidden');
             setLoginMode('employee');
@@ -1209,20 +1142,16 @@
             const email = document.getElementById('fp-email').value.trim().toLowerCase();
             const newPassword = document.getElementById('fp-new-password').value;
 
-            db.collection("users").doc(email).get().then(doc => {
-                if (!doc.exists) {
-                    alert('No account found with this email address.');
-                    return;
-                }
-                db.collection("users").doc(email).update({ password: newPassword })
-                    .then(() => {
-                        alert('Password successfully reset! You can now login with your new password.');
-                        closeForgotPasswordModal();
-                        document.getElementById('forgot-password-modal').querySelector('form').reset();
-                    });
-            }).catch(err => {
-                alert('Error updating password: ' + err.message);
-            });
+            const u = users.find(x => x.email === email);
+            if (!u) {
+                alert('No account found with this email address.');
+                return;
+            }
+            u.password = newPassword;
+            saveToStorage();
+            alert('Password successfully reset! You can now login with your new password.');
+            closeForgotPasswordModal();
+            document.getElementById('forgot-password-modal').querySelector('form').reset();
         }
 
         // ================= PROFILE MODAL FUNCTIONS =================
@@ -1272,16 +1201,14 @@
                 tempUploadedPic = '';
             }
 
-            db.collection("users").doc(currentUser.email).set(currentUser, { merge: true })
-                .then(() => {
-                    localStorage.setItem('msme_current_user', JSON.stringify(currentUser));
-                    renderDashboard();
-                    closeProfileModal();
-                    alert('Profile successfully updated!');
-                })
-                .catch(err => {
-                    alert('Error updating profile: ' + err.message);
-                });
+            const idx = users.findIndex(u => u.email === currentUser.email);
+            if (idx > -1) {
+                users[idx] = currentUser;
+            }
+            saveToStorage();
+            renderDashboard();
+            closeProfileModal();
+            alert('Profile successfully updated!');
         }
 
         function renderDashboard() {
@@ -1373,10 +1300,10 @@
                 subEl.textContent = "Scanning face to return from break...";
             } else if (action === 'in') {
                 titleEl.textContent = "Secure Time-In Face Verification";
-                subEl.textContent = "Scanning and transmitting attendance securely to cloud...";
+                subEl.textContent = "Scanning and transmitting attendance securely to storage...";
             } else {
                 titleEl.textContent = "Secure Time-Out Face Verification";
-                subEl.textContent = "Scanning and transmitting attendance securely to cloud...";
+                subEl.textContent = "Scanning and transmitting attendance securely to storage...";
             }
 
             document.getElementById('face-modal').classList.remove('hidden');
@@ -1498,14 +1425,9 @@
                 if (snapshotUrl) rec.timeOutSnapshot = snapshotUrl;
             }
 
-            db.collection("attendance").doc(currentUser.email).set({ records: attendanceRecords[currentUser.email] }, { merge: true })
-                .then(() => {
-                    alert('Face Recognized & Attendance successfully synced to Cloud!');
-                    updateEmployeeUI();
-                })
-                .catch(err => {
-                    alert('Error saving attendance to cloud: ' + err.message);
-                });
+            saveToStorage();
+            alert('Face Recognized & Attendance successfully recorded!');
+            updateEmployeeUI();
         }
 
         function openPhotoPreview(url) {
@@ -1631,6 +1553,7 @@
 
             const reqId = 'leave_' + Date.now();
             const newReq = { 
+                id: reqId,
                 employeeEmail: currentUser.email, 
                 employeeName: currentUser.name, 
                 type, 
@@ -1641,17 +1564,13 @@
                 approvedBy: '-' 
             };
 
-            db.collection("leaves").doc(reqId).set(newReq)
-                .then(() => {
-                    document.getElementById('leave-form').reset();
-                    selectedLeaveDatesSet = [];
-                    document.getElementById('leave-dates-display').value = '';
-                    updateEmployeeUI();
-                    alert('Leave request submitted successfully to Cloud!');
-                })
-                .catch(err => {
-                    alert('Error submitting leave: ' + err.message);
-                });
+            leaveRequests.push(newReq);
+            saveToStorage();
+            document.getElementById('leave-form').reset();
+            selectedLeaveDatesSet = [];
+            document.getElementById('leave-dates-display').value = '';
+            updateEmployeeUI();
+            alert('Leave request submitted successfully!');
         }
 
         function changeMonth(direction) {
@@ -2316,14 +2235,14 @@
 
         function updateLeaveStatus(id, status) {
             const approverInfo = `${currentUser.name} (${currentUser.position})`;
-            db.collection("leaves").doc(id).update({ status, approvedBy: approverInfo })
-                .then(() => {
-                    alert('Leave request status updated successfully in Cloud!');
-                    updateAdminUI();
-                })
-                .catch(err => {
-                    alert('Error updating leave status: ' + err.message);
-                });
+            const req = leaveRequests.find(r => r.id === id);
+            if (req) {
+                req.status = status;
+                req.approvedBy = approverInfo;
+                saveToStorage();
+                alert('Leave request status updated successfully!');
+                updateAdminUI();
+            }
         }
 
         function clearLeaveDateFilter() {
