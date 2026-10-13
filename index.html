@@ -193,7 +193,7 @@
                 <span id="user-role-badge" class="bg-brand-teal text-[10px] sm:text-xs px-2.5 py-1 rounded-full uppercase font-semibold shadow-sm"></span>
             </div>
             
-            <!-- Navigation Header Tabs (Separating Attendance and Leave) -->
+            <!-- Navigation Header Tabs -->
             <div id="nav-tabs-container" class="flex items-center space-x-2 bg-slate-900/80 p-1 rounded-xl border border-slate-700 shadow-inner overflow-x-auto max-w-full">
                 <!-- Dynamically populated based on role -->
             </div>
@@ -409,7 +409,6 @@
 
             <!-- ADMIN ATTENDANCE TAB VIEW -->
             <section id="admin-attendance-section" class="space-y-6 hidden">
-                <!-- Attendance Monitoring Card (Printable Area) -->
                 <div id="print-area" class="bg-white p-5 sm:p-6 rounded-xl shadow-sm border border-slate-200">
                     <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-4 gap-4">
                         <div>
@@ -475,7 +474,6 @@
 
             <!-- ADMIN LEAVE MANAGEMENT TAB VIEW -->
             <section id="admin-leave-section" class="space-y-6 hidden">
-                <!-- Leave Requests Monitoring Card -->
                 <div class="bg-white p-5 sm:p-6 rounded-xl shadow-sm border border-slate-200">
                     <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-4 gap-4">
                         <div>
@@ -770,15 +768,16 @@
         </div>
     </div>
 
-    <footer class="bg-white text-center py-4 text-xs text-slate-500 border-t border-slate-200 shadow-sm">
-        TrackRight HR &mdash; Accurate Records, Reliable Tracking (Cloud-Synced).
-    </footer>
+    <!-- ================= SYSTEM RESET BUTTON (ADMIN ONLY / UTILITY) ================= -->
+    <div class="bg-slate-900 text-slate-400 text-center py-2 text-[11px] flex justify-center items-center gap-4 border-t border-slate-800">
+        <span>TrackRight HR &mdash; Clean Slate Database Active</span>
+        <button onclick="forceResetCloudDatabase()" class="bg-rose-900/50 hover:bg-rose-800 text-rose-200 px-2.5 py-1 rounded text-[10px] font-semibold transition border border-rose-700">⚠️ I-reset ang Lahat (Clean Slate)</button>
+    </div>
 
     <!-- ================= JAVASCRIPT & FIREBASE CLOUD SYNC LOGIC ================= -->
     <script>
         // -------------------------------------------------------------
-        // FIREBASE CLOUD CONFIGURATION FOR CROSS-DEVICE SYNC
-        // (Gamit ang libreng public demo Firestore para mag-sync sa lahat ng device)
+        // FIREBASE CLOUD CONFIGURATION
         // -------------------------------------------------------------
         const firebaseConfig = {
             apiKey: "AIzaSyD-DemoKeyForTrackRightHRPortal12345",
@@ -789,30 +788,22 @@
             appId: "1:123456789012:web:abcdef1234567890"
         };
 
-        // Initialize Firebase if not already initialized
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
         }
         const db = firebase.firestore();
 
-        // In-memory/cloud cache states
         let users = [];
-        let currentUser = null;
+        let currentUser = JSON.parse(localStorage.getItem('msme_current_user')) || null;
         let attendanceRecords = {}; 
         let leaveRequests = [];
-        
-        // Load local fallback session for quick UI render
-        currentUser = JSON.parse(localStorage.getItem('msme_current_user')) || null;
 
-        // Real-time Cloud listeners to sync data automatically across any device
         function initCloudSync() {
-            // Listen to users collection
             db.collection("users").onSnapshot((snapshot) => {
                 users = [];
                 snapshot.forEach((doc) => {
                     users.push(doc.data());
                 });
-                localStorage.setItem('msme_users', JSON.stringify(users));
                 if (currentUser) {
                     const verified = users.find(u => u.email === currentUser.email);
                     if (verified) {
@@ -822,40 +813,60 @@
                 }
                 refreshActiveViews();
             }, (error) => {
-                console.warn("Cloud sync offline mode, falling back to local storage:", error);
-                loadFromLocalStorage();
+                console.warn("Cloud sync error:", error);
             });
 
-            // Listen to attendance collection
             db.collection("attendance").onSnapshot((snapshot) => {
                 attendanceRecords = {};
                 snapshot.forEach((doc) => {
                     attendanceRecords[doc.id] = doc.data().records || {};
                 });
-                localStorage.setItem('msme_attendance', JSON.stringify(attendanceRecords));
                 refreshActiveViews();
             }, (error) => {
                 console.warn("Attendance cloud sync error:", error);
             });
 
-            // Listen to leaves collection
             db.collection("leaves").onSnapshot((snapshot) => {
                 leaveRequests = [];
                 snapshot.forEach((doc) => {
                     leaveRequests.push({ id: doc.id, ...doc.data() });
                 });
-                localStorage.setItem('msme_leaves', JSON.stringify(leaveRequests));
                 refreshActiveViews();
             }, (error) => {
                 console.warn("Leaves cloud sync error:", error);
             });
         }
 
-        function loadFromLocalStorage() {
-            users = JSON.parse(localStorage.getItem('msme_users')) || [];
-            attendanceRecords = JSON.parse(localStorage.getItem('msme_attendance')) || {};
-            leaveRequests = JSON.parse(localStorage.getItem('msme_leaves')) || [];
-            refreshActiveViews();
+        // Utility function to wipe / clean slate database completely
+        async function forceResetCloudDatabase() {
+            if (!confirm("Sigurado ka bang gusto mong i-reset at burahin ang LAHAT ng empleyado, attendance, at leave requests? Magiging ganap na bago at walang laman ang app.")) {
+                return;
+            }
+            try {
+                // Delete users
+                const uSnap = await db.collection("users").get();
+                const batchU = db.batch();
+                uSnap.forEach(doc => batchU.delete(doc.ref));
+                await batchU.commit();
+
+                // Delete attendance
+                const aSnap = await db.collection("attendance").get();
+                const batchA = db.batch();
+                aSnap.forEach(doc => batchA.delete(doc.ref));
+                await batchA.commit();
+
+                // Delete leaves
+                const lSnap = await db.collection("leaves").get();
+                const batchL = db.batch();
+                lSnap.forEach(doc => batchL.delete(doc.ref));
+                await batchL.commit();
+
+                localStorage.clear();
+                alert("Matagumpay na na-reset ang buong database! Naka-clean slate na ang system.");
+                location.reload();
+            } catch (err) {
+                alert("Error sa pag-reset: " + err.message);
+            }
         }
 
         function refreshActiveViews() {
@@ -868,7 +879,6 @@
             }
         }
 
-        // Default Leave Credits per Type
         const leaveCreditLimits = {
             "Vacation Leave": 5,
             "Birthday Leave": 1,
@@ -923,9 +933,7 @@
         }
 
         function leaveDatesOf(req) {
-            if (req.dates && Array.isArray(req.dates)) {
-                return req.dates;
-            }
+            if (req.dates && Array.isArray(req.dates)) return req.dates;
             if (req.date) return [req.date];
             return [];
         }
@@ -1056,10 +1064,11 @@
             });
         }
 
-        function handleRegister(e) {
+        // Robust Direct Firestore Check on Register to Avoid False Duplicates
+        async function handleRegister(e) {
             e.preventDefault();
             const name = document.getElementById('reg-name').value;
-            const email = document.getElementById('reg-email').value;
+            const email = document.getElementById('reg-email').value.trim().toLowerCase();
             const password = document.getElementById('reg-password').value;
             const confirmPassword = document.getElementById('reg-confirm-password').value;
             const role = document.getElementById('reg-role').value;
@@ -1076,35 +1085,36 @@
 
             const todayStr = todayLocal();
 
-            if (users.some(u => u.email === email)) {
-                alert('An account with this email already exists!');
-                return;
+            try {
+                // Check direct in Firestore
+                const docRef = db.collection("users").doc(email);
+                const docSnap = await docRef.get();
+                if (docSnap.exists) {
+                    alert('An account with this email already exists in the database!');
+                    return;
+                }
+
+                const newUser = { 
+                    id: Date.now(), 
+                    name, 
+                    email, 
+                    password, 
+                    role, 
+                    position, 
+                    createdAt: todayStr,
+                    profilePic: ''
+                };
+
+                await docRef.set(newUser);
+                alert('Registration successful! You may now login.');
+                setLoginMode(role);
+                showPage('login-card');
+                document.getElementById('register-card').querySelector('form').reset();
+                togglePositionDropdown();
+                populatePositionFilter();
+            } catch (err) {
+                alert('Registration error: ' + err.message);
             }
-
-            const newUser = { 
-                id: Date.now(), 
-                name, 
-                email, 
-                password, 
-                role, 
-                position, 
-                createdAt: todayStr,
-                profilePic: ''
-            };
-
-            // Save to Cloud Firestore
-            db.collection("users").doc(email).set(newUser)
-                .then(() => {
-                    alert('Registration successful! You may now login.');
-                    setLoginMode(role);
-                    showPage('login-card');
-                    document.getElementById('register-card').querySelector('form').reset();
-                    togglePositionDropdown();
-                    populatePositionFilter();
-                })
-                .catch(err => {
-                    alert('Registration error: ' + err.message);
-                });
         }
 
         function setLoginMode(mode) {
@@ -1138,29 +1148,42 @@
             setLoginMode(loginMode === 'employee' ? 'admin' : 'employee');
         }
 
-        function handleLogin(e) {
+        // Robust Direct Firestore Login Verification
+        async function handleLogin(e) {
             e.preventDefault();
-            const email = document.getElementById('login-email').value;
+            const email = document.getElementById('login-email').value.trim().toLowerCase();
             const password = document.getElementById('login-password').value;
 
-            const foundUser = users.find(u => u.email === email && u.password === password);
-            if (!foundUser) {
-                alert('Invalid email or password, or account is not registered.');
-                return;
-            }
+            try {
+                const docRef = db.collection("users").doc(email);
+                const docSnap = await docRef.get();
 
-            if (loginMode === 'admin' && foundUser.role !== 'admin') {
-                alert('This account is not an Admin/HR account. Please use the Employee Login.');
-                return;
-            }
-            if (loginMode === 'employee' && foundUser.role === 'admin') {
-                alert('Admin/HR accounts must log in using "Log in as Admin / HR".');
-                return;
-            }
+                if (!docSnap.exists) {
+                    alert('Invalid email or password, or account is not registered.');
+                    return;
+                }
 
-            currentUser = foundUser;
-            localStorage.setItem('msme_current_user', JSON.stringify(currentUser));
-            renderDashboard();
+                const foundUser = docSnap.data();
+                if (foundUser.password !== password) {
+                    alert('Incorrect password! Please check your password.');
+                    return;
+                }
+
+                if (loginMode === 'admin' && foundUser.role !== 'admin') {
+                    alert('This account is not an Admin/HR account. Please use the Employee Login.');
+                    return;
+                }
+                if (loginMode === 'employee' && foundUser.role === 'admin') {
+                    alert('Admin/HR accounts must log in using "Log in as Admin / HR".');
+                    return;
+                }
+
+                currentUser = foundUser;
+                localStorage.setItem('msme_current_user', JSON.stringify(currentUser));
+                renderDashboard();
+            } catch (err) {
+                alert('Login error: ' + err.message);
+            }
         }
 
         function handleLogout() {
@@ -1183,24 +1206,23 @@
 
         function handleForgotPassword(e) {
             e.preventDefault();
-            const email = document.getElementById('fp-email').value;
+            const email = document.getElementById('fp-email').value.trim().toLowerCase();
             const newPassword = document.getElementById('fp-new-password').value;
 
-            const targetUser = users.find(u => u.email === email);
-            if (!targetUser) {
-                alert('No account found with this email address.');
-                return;
-            }
-
-            db.collection("users").doc(email).update({ password: newPassword })
-                .then(() => {
-                    alert('Password successfully reset! You can now login with your new password.');
-                    closeForgotPasswordModal();
-                    document.getElementById('forgot-password-modal').querySelector('form').reset();
-                })
-                .catch(err => {
-                    alert('Error updating password: ' + err.message);
-                });
+            db.collection("users").doc(email).get().then(doc => {
+                if (!doc.exists) {
+                    alert('No account found with this email address.');
+                    return;
+                }
+                db.collection("users").doc(email).update({ password: newPassword })
+                    .then(() => {
+                        alert('Password successfully reset! You can now login with your new password.');
+                        closeForgotPasswordModal();
+                        document.getElementById('forgot-password-modal').querySelector('form').reset();
+                    });
+            }).catch(err => {
+                alert('Error updating password: ' + err.message);
+            });
         }
 
         // ================= PROFILE MODAL FUNCTIONS =================
@@ -1218,7 +1240,6 @@
                 avatarContainer.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>`;
             }
             document.getElementById('profile-pic-input').value = '';
-
             document.getElementById('profile-modal').classList.remove('hidden');
         }
 
@@ -1477,7 +1498,6 @@
                 if (snapshotUrl) rec.timeOutSnapshot = snapshotUrl;
             }
 
-            // Save to Cloud Firestore
             db.collection("attendance").doc(currentUser.email).set({ records: attendanceRecords[currentUser.email] }, { merge: true })
                 .then(() => {
                     alert('Face Recognized & Attendance successfully synced to Cloud!');
@@ -1497,7 +1517,6 @@
             document.getElementById('photo-preview-modal').classList.add('hidden');
         }
 
-        // ================= MULTI-DATE LEAVE PICKER WITH CREDITS =================
         function openLeaveDatePicker() {
             selectedLeaveDatesSet = [];
             renderLeavePickerCalendar();
@@ -1669,7 +1688,6 @@
             let totalMonthOverbreakMins = 0;
             const currentMonthPrefix = `${calendarYear}-${(calendarMonth + 1) < 10 ? '0' + (calendarMonth + 1) : (calendarMonth + 1)}`;
 
-            // Populate Employee Print Leaves Table
             const empPrintLeavesTbody = document.getElementById('emp-print-leaves-tbody');
             if (empPrintLeavesTbody) {
                 empPrintLeavesTbody.innerHTML = '';
@@ -1876,7 +1894,6 @@
             let totalMonthOverbreakMins = 0;
             const currentMonthPrefix = `${adminCalendarYear}-${(adminCalendarMonth + 1) < 10 ? '0' + (adminCalendarMonth + 1) : (adminCalendarMonth + 1)}`;
 
-            // Populate Admin Leaves Tbody Table for employee modal
             const adminLeavesTbody = document.getElementById('admin-modal-leaves-tbody');
             if (adminLeavesTbody) {
                 adminLeavesTbody.innerHTML = '';
