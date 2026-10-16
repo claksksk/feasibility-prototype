@@ -768,8 +768,8 @@
         </div>
     </div>
 
-    <!-- ================= SYSTEM RESET BUTTON (ADMIN ONLY / UTILITY) ================= -->
-    <div class="bg-slate-900 text-slate-400 text-center py-2 text-[11px] flex justify-center items-center gap-4 border-t border-slate-800">
+    <!-- ================= SYSTEM RESET BUTTON (ADMIN ONLY UTILITY) ================= -->
+    <div id="admin-reset-footer" class="bg-slate-900 text-slate-400 text-center py-2 text-[11px] hidden justify-center items-center gap-4 border-t border-slate-800">
         <span>TrackRight HR &mdash; Clean Slate Database Active</span>
         <button onclick="forceResetCloudDatabase()" class="bg-rose-900/50 hover:bg-rose-800 text-rose-200 px-2.5 py-1 rounded text-[10px] font-semibold transition border border-rose-700">⚠️ Clean all the data</button>
     </div>
@@ -839,6 +839,10 @@
         }
 
         async function forceResetCloudDatabase() {
+            if (!currentUser || currentUser.role !== 'admin') {
+                alert("Unauthorized! Only Admin / HR can clean database records.");
+                return;
+            }
             if (!confirm("Sigurado ka bang gusto mong i-reset at burahin ang LAHAT ng empleyado, attendance, at leave requests? Magiging ganap na bago at walang laman ang app.")) {
                 return;
             }
@@ -868,6 +872,16 @@
 
         function refreshActiveViews() {
             if (currentUser) {
+                // Show clean footer only if admin
+                const footer = document.getElementById('admin-reset-footer');
+                if (currentUser.role === 'admin') {
+                    footer.classList.remove('hidden');
+                    footer.classList.add('flex');
+                } else {
+                    footer.classList.add('hidden');
+                    footer.classList.remove('flex');
+                }
+
                 if (currentUser.role === 'employee') {
                     updateEmployeeUI();
                 } else {
@@ -1489,7 +1503,8 @@
                     alert('Please complete your Break-Out (return from break) first before timing out.');
                     return;
                 }
-                rec.status = 'Offline';
+                // HINDI DAPAT NAWALA ANG DATA/STATUS. I-set sa 'Done Shift' o 'Offline' pero kasama ang buong records at snapshots.
+                rec.status = 'Done Shift';
                 rec.timeOut = nowTime;
                 rec.timeOutTimestamp = nowTimestamp;
                 if (snapshotUrl) rec.timeOutSnapshot = snapshotUrl;
@@ -1747,7 +1762,7 @@
                     statusLabel.className = "text-[9px] sm:text-[10px] font-semibold";
                     statusLabel.textContent = "Leave";
                     cell.appendChild(statusLabel);
-                } else if (userAtt && (userAtt.status === 'Working' || userAtt.status === 'On Break' || userAtt.timeOut !== '-')) {
+                } else if (userAtt && (userAtt.status === 'Working' || userAtt.status === 'On Break' || userAtt.status === 'Done Shift' || userAtt.timeOut !== '-')) {
                     cell.classList.add('bg-emerald-500', 'border-emerald-600', 'text-white');
                     let statusLabel = document.createElement('span');
                     statusLabel.className = "text-[8px] sm:text-[9px] font-semibold text-center leading-tight";
@@ -1809,8 +1824,8 @@
                 const overbreakMins = getOverbreakMinutes(userAtt);
                 overbreakVal = `${overbreakMins} minute/s`;
 
-                if (userAtt.status === 'On Break' || userAtt.status === 'Working' || userAtt.timeOut !== '-') {
-                    statusText = overbreakMins > 0 ? "Overbreak" : "Present / Working";
+                if (userAtt.status === 'On Break' || userAtt.status === 'Working' || userAtt.status === 'Done Shift' || userAtt.timeOut !== '-') {
+                    statusText = overbreakMins > 0 ? "Overbreak" : (userAtt.status === 'Done Shift' ? "Done Shift (Present)" : "Present / Working");
                     if (userAtt.status === 'On Break') {
                         hoursVal = "On Break";
                     } else if (userAtt.timeInTimestamp) {
@@ -1823,7 +1838,7 @@
 
             const modalStatus = document.getElementById('modal-status');
             modalStatus.textContent = statusText;
-            modalStatus.className = 'font-semibold ' + (statusText === 'Absent' || statusText === 'Overbreak' ? 'text-rose-600' : statusText.startsWith('On-Leave') ? 'text-amber-600' : statusText.includes('Working') || statusText.includes('Present') ? 'text-emerald-600' : 'text-slate-700');
+            modalStatus.className = 'font-semibold ' + (statusText === 'Absent' || statusText === 'Overbreak' ? 'text-rose-600' : statusText.startsWith('On-Leave') ? 'text-amber-600' : statusText.includes('Working') || statusText.includes('Present') || statusText.includes('Done Shift') ? 'text-emerald-600' : 'text-slate-700');
             document.getElementById('modal-time-in').textContent = timeInVal;
             document.getElementById('modal-break-in').textContent = breakInVal;
             document.getElementById('modal-break-out').textContent = breakOutVal;
@@ -1952,7 +1967,7 @@
                     statusLabel.className = "text-[9px] sm:text-[10px] font-semibold";
                     statusLabel.textContent = "Leave";
                     cell.appendChild(statusLabel);
-                } else if (empAtt && (empAtt.status === 'Working' || empAtt.status === 'On Break' || empAtt.timeOut !== '-')) {
+                } else if (empAtt && (empAtt.status === 'Working' || empAtt.status === 'On Break' || empAtt.status === 'Done Shift' || empAtt.timeOut !== '-')) {
                     cell.classList.add('bg-emerald-500', 'border-emerald-600', 'text-white');
                     let statusLabel = document.createElement('span');
                     statusLabel.className = "text-[8px] sm:text-[9px] font-semibold text-center leading-tight";
@@ -2006,6 +2021,8 @@
                     }
                 } else if (record && record.status === 'Working') {
                     statusEl.innerHTML = `Current Status: <span class="font-semibold text-emerald-600">Working (In: ${record.timeIn})</span>`;
+                } else if (record && record.status === 'Done Shift') {
+                    statusEl.innerHTML = `Current Status: <span class="font-semibold text-slate-600">Shift Completed (Time-Out: ${record.timeOut})</span>`;
                 } else {
                     statusEl.innerHTML = `Current Status: <span class="font-semibold text-rose-600">Offline</span>`;
                 }
@@ -2033,7 +2050,7 @@
                     const empRec = attendanceRecords[currentUser.email] && attendanceRecords[currentUser.email][checkDate];
                     const approvedLv = getApprovedLeave(currentUser.email, checkDate);
                     
-                    const worked = empRec && (empRec.status === 'Working' || empRec.status === 'On Break' || empRec.timeOut !== '-');
+                    const worked = empRec && (empRec.status === 'Working' || empRec.status === 'On Break' || empRec.status === 'Done Shift' || empRec.timeOut !== '-');
                     if (!worked && !approvedLv && checkDate < todayDate) {
                         monthlyAbsencesCount++;
                     }
@@ -2185,7 +2202,8 @@
             users.filter(u => u.role === 'employee').forEach(emp => {
                 if (attendanceRecords[emp.email]) {
                     Object.keys(attendanceRecords[emp.email]).forEach(d => {
-                        if (attendanceRecords[emp.email][d].status !== 'Offline') {
+                        const rec = attendanceRecords[emp.email][d];
+                        if (rec && rec.status !== 'Offline') {
                             attendanceDates[d] = true;
                         }
                     });
@@ -2354,7 +2372,8 @@
                 const matchesPosition = positionFilter === '' || emp.position === positionFilter;
                 
                 if (attDate) {
-                    const hasAttendance = attendanceRecords[emp.email] && attendanceRecords[emp.email][attDate] && attendanceRecords[emp.email][attDate].status !== 'Offline';
+                    const rec = attendanceRecords[emp.email] && attendanceRecords[emp.email][attDate];
+                    const hasAttendance = rec && (rec.status !== 'Offline' || rec.timeIn !== '-');
                     const hasLeave = getApprovedLeave(emp.email, attDate);
                     if (!hasAttendance && !hasLeave) {
                         return false;
@@ -2410,7 +2429,7 @@
                         statusBadge = '<span class="px-2.5 py-1 bg-slate-100 text-slate-400 rounded-md text-xs font-semibold">Not Registered Yet</span>';
                     } else if (approvedLeave) {
                         statusBadge = `<span class="px-2.5 py-1 bg-amber-100 text-amber-800 border border-amber-200 rounded-md text-xs font-semibold">On-Leave (${approvedLeave.type})</span>`;
-                    } else if (empDailyRec) {
+                    } else if (empDailyRec && (empDailyRec.status !== 'Offline' || empDailyRec.timeIn !== '-')) {
                         const overbreakMins = getOverbreakMinutes(empDailyRec);
                         if (empDailyRec.status === 'On Break') {
                             statusBadge = '<span class="px-2.5 py-1 bg-amber-100 text-amber-700 border border-amber-200 rounded-md text-xs font-semibold">On Break</span>';
@@ -2418,7 +2437,7 @@
                             statusBadge = '<span class="px-2.5 py-1 bg-rose-100 text-rose-700 border border-rose-200 rounded-md text-xs font-semibold animate-pulse">Overbreak</span>';
                         } else if (empDailyRec.status === 'Working') {
                             statusBadge = '<span class="px-2.5 py-1 bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-md text-xs font-semibold">Working</span>';
-                        } else if (empDailyRec.timeOut !== '-') {
+                        } else if (empDailyRec.status === 'Done Shift' || empDailyRec.timeOut !== '-') {
                             statusBadge = '<span class="px-2.5 py-1 bg-slate-200 text-slate-700 rounded-md text-xs font-semibold">Done Shift</span>';
                         } else {
                             statusBadge = '<span class="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-md text-xs font-semibold">Offline</span>';
