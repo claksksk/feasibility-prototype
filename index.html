@@ -15,8 +15,6 @@
     <!-- Firebase App & Firestore SDKs CDN -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-    <!-- External Config for Secret Keys Security (gitignored in public repos) -->
-    <script src="config.js"></script>
     <style>
         #webcam {
             transform: scaleX(1) !important;
@@ -779,16 +777,16 @@
     <!-- ================= JAVASCRIPT & FIREBASE CLOUD SYNC LOGIC ================= -->
     <script>
         // -------------------------------------------------------------
-        // FIREBASE CLOUD CONFIGURATION (Loaded from external config.js)
+        // FIREBASE CLOUD CONFIGURATION (Direct fallback integrated)
         // -------------------------------------------------------------
         const firebaseConfig = window.firebaseConfig || {
             apiKey: "AIzaSyA6CnIkI6ZY7n58eIHljl8rNlX8ZtXS4dQ",
-  authDomain: "trackright-web-app.firebaseapp.com",
-  projectId: "trackright-web-app",
-  storageBucket: "trackright-web-app.firebasestorage.app",
-  messagingSenderId: "395841224221",
-  appId: "1:395841224221:web:8f3a3d5d77bc5d74eb50f4",
-  measurementId: "G-B0T7EXQEGX"
+            authDomain: "trackright-web-app.firebaseapp.com",
+            projectId: "trackright-web-app",
+            storageBucket: "trackright-web-app.firebasestorage.app",
+            messagingSenderId: "395841224221",
+            appId: "1:395841224221:web:8f3a3d5d77bc5d74eb50f4",
+            measurementId: "G-B0T7EXQEGX"
         };
 
         if (!firebase.apps.length) {
@@ -840,7 +838,6 @@
             });
         }
 
-        // Utility function to wipe / clean slate database completely
         async function forceResetCloudDatabase() {
             if (!confirm("Sigurado ka bang gusto mong i-reset at burahin ang LAHAT ng empleyado, attendance, at leave requests? Magiging ganap na bago at walang laman ang app.")) {
                 return;
@@ -1410,7 +1407,6 @@
             let snapshotUrl = '';
             if (videoEl) {
                 const canvas = document.createElement('canvas');
-                // Robust fallback width/height kung sakaling 0 pa ang videoWidth
                 canvas.width = videoEl.videoWidth || 320;
                 canvas.height = videoEl.videoHeight || 240;
                 const ctx = canvas.getContext('2d');
