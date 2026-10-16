@@ -773,7 +773,7 @@
     <!-- ================= SYSTEM RESET BUTTON (ADMIN ONLY / UTILITY) ================= -->
     <div class="bg-slate-900 text-slate-400 text-center py-2 text-[11px] flex justify-center items-center gap-4 border-t border-slate-800">
         <span>TrackRight HR &mdash; Clean Slate Database Active</span>
-        <button onclick="forceResetCloudDatabase()" class="bg-rose-900/50 hover:bg-rose-800 text-rose-200 px-2.5 py-1 rounded text-[10px] font-semibold transition border border-rose-700">⚠️ I-reset ang Lahat (Clean Slate)</button>
+        <button onclick="forceResetCloudDatabase()" class="bg-rose-900/50 hover:bg-rose-800 text-rose-200 px-2.5 py-1 rounded text-[10px] font-semibold transition border border-rose-700">⚠️ Clean all the data</button>
     </div>
 
     <!-- ================= JAVASCRIPT & FIREBASE CLOUD SYNC LOGIC ================= -->
@@ -782,12 +782,13 @@
         // FIREBASE CLOUD CONFIGURATION (Loaded from external config.js)
         // -------------------------------------------------------------
         const firebaseConfig = window.firebaseConfig || {
-            apiKey: "AIzaSyD-DemoKeyForTrackRightHRPortal12345",
-            authDomain: "trackright-hr-portal.firebaseapp.com",
-            projectId: "trackright-hr-portal",
-            storageBucket: "trackright-hr-portal.appspot.com",
-            messagingSenderId: "123456789012",
-            appId: "1:123456789012:web:abcdef1234567890"
+            apiKey: "AIzaSyA6CnIkI6ZY7n58eIHljl8rNlX8ZtXS4dQ",
+  authDomain: "trackright-web-app.firebaseapp.com",
+  projectId: "trackright-web-app",
+  storageBucket: "trackright-web-app.firebasestorage.app",
+  messagingSenderId: "395841224221",
+  appId: "1:395841224221:web:8f3a3d5d77bc5d74eb50f4",
+  measurementId: "G-B0T7EXQEGX"
         };
 
         if (!firebase.apps.length) {
