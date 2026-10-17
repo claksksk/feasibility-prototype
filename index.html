@@ -843,27 +843,31 @@
                 alert("Unauthorized! Only Admin / HR can clean database records.");
                 return;
             }
-            if (!confirm("Sigurado ka bang gusto mong i-reset at burahin ang LAHAT ng empleyado, attendance, at leave requests? Magiging ganap na bago at walang laman ang app.")) {
+            if (!confirm("Sigurado ka bang gusto mong i-reset at burahin ang LAHAT ng empleyado, accounts, attendance, at leave requests? Magiging ganap na bago at walang laman ang buong sistema.")) {
                 return;
             }
             try {
+                // Delete all users
                 const uSnap = await db.collection("users").get();
                 const batchU = db.batch();
                 uSnap.forEach(doc => batchU.delete(doc.ref));
                 await batchU.commit();
 
+                // Delete all attendance records
                 const aSnap = await db.collection("attendance").get();
                 const batchA = db.batch();
                 aSnap.forEach(doc => batchA.delete(doc.ref));
                 await batchA.commit();
 
+                // Delete all leave requests
                 const lSnap = await db.collection("leaves").get();
                 const batchL = db.batch();
                 lSnap.forEach(doc => batchL.delete(doc.ref));
                 await batchL.commit();
 
+                // Clear LocalStorage entirely
                 localStorage.clear();
-                alert("Matagumpay na na-reset ang buong database! Naka-clean slate na ang system.");
+                alert("Matagumpay na na-reset at nalinis ang LAHAT ng data (kasama ang mga empleyado at accounts). Naka-clean slate na ang system.");
                 location.reload();
             } catch (err) {
                 alert("Error sa pag-reset: " + err.message);
@@ -871,17 +875,18 @@
         }
 
         function refreshActiveViews() {
-            if (currentUser) {
-                // Show clean footer only if admin
-                const footer = document.getElementById('admin-reset-footer');
-                if (currentUser.role === 'admin') {
+            const footer = document.getElementById('admin-reset-footer');
+            if (footer) {
+                if (currentUser && currentUser.role === 'admin') {
                     footer.classList.remove('hidden');
                     footer.classList.add('flex');
                 } else {
                     footer.classList.add('hidden');
                     footer.classList.remove('flex');
                 }
+            }
 
+            if (currentUser) {
                 if (currentUser.role === 'employee') {
                     updateEmployeeUI();
                 } else {
@@ -1306,6 +1311,7 @@
             }
 
             renderNavTabs();
+            refreshActiveViews();
 
             if (currentUser.role === 'employee') {
                 switchTab('employee-attendance-section');
@@ -1503,7 +1509,6 @@
                     alert('Please complete your Break-Out (return from break) first before timing out.');
                     return;
                 }
-                // HINDI DAPAT NAWALA ANG DATA/STATUS. I-set sa 'Done Shift' o 'Offline' pero kasama ang buong records at snapshots.
                 rec.status = 'Done Shift';
                 rec.timeOut = nowTime;
                 rec.timeOutTimestamp = nowTimestamp;
